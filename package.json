@@ -19,5 +19,8 @@
   "scripts": {
     "build": "gulp",
     "watch": "gulp watch"
+  },
+  "dependencies": {
+    "@types/webgl-ext": "^0.0.28"
   }
 }
