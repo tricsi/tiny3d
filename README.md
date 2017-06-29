@@ -2,7 +2,7 @@
 
 Tiny WebGL library for js13kgames game competition.
 
-[Example](https://tricsi.github.io/tiny3d/example/)
+[Example](https://tricsi.github.io/tiny3d/example/index.html)
 
     Mouse wheel = Zoom
     Mouse drag  = Rotate
