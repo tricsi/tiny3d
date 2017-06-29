@@ -1,0 +1,23 @@
+{
+  "name": "tiny3d",
+  "version": "0.0.1",
+  "description": "Tiny WebGL library",
+  "author": "@CsabaCsecskedi",
+  "license": "MIT",
+  "main": "./lib/t3d.js",
+  "types": "./lib/t3d.d.td",
+  "devDependencies": {
+    "del": "^2.2.2",
+    "gulp": "^3.9.1",
+    "gulp-cli": "^1.3.0",
+    "gulp-minify": "^1.0.0",
+    "gulp-sourcemaps": "^2.6.0",
+    "gulp-typescript": "^3.1.7",
+    "merge2": "^1.0.3",
+    "typescript": "2.*"
+  },
+  "scripts": {
+    "build": "gulp",
+    "watch": "gulp watch"
+  }
+}

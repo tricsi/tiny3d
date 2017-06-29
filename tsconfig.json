@@ -1,0 +1,9 @@
+{
+    "files": [
+        "src/t3d.ts"
+    ],
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs"
+    }
+}

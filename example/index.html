@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Tiny3D example</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body, html, canvas { margin: 0; padding: 0; }
+#canvas { width: 100%; height: 70%; position: absolute; top: 0; }
+#code { width: 100%; height: 30%; position: absolute; bottom: 0; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="code">let blue = [.3, .3, 1, 30];
+let green = [.1, 1, .1, 30];
+let pine = new T3D.Mesh(6, [.2, .3, .1, .3, .3, .1, .2, .1, .4, -.1, .3, -.1, .5, -.3, .1, -.3, .1, -.5]);
+let barrel = new T3D.Mesh(16, [.5, .5, .5, .55, .55, .55, .55, .45, .5, .45, .5, .05, .55, .05, .55, -.05, .5, -.05, .5, -.45, .55, -.45, .55, -.55, .5, -.55, .5, -.5], 30);
+scene = new T3D.Item()
+.add(new T3D.Item(pine, green, [-.5]))
+.add(new T3D.Item(barrel, blue, [.5,,,,,,.7,.7,.7]))
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.7/ace.js"></script>
+<script src="../lib/t3d.js"></script>
+<script>
+
+function $(query, element) {
+    return (element || document).querySelector(query);
+}
+
+function on(element, event, callback) {
+    element.addEventListener(event, callback, false);
+}
+
+var canvas = $('#canvas');
+var gl = canvas.getContext('experimental-webgl');
+var code = ace.edit("code");
+var scene = new T3D.Item();
+var camera = new T3D.Camera(canvas.width / canvas.height);
+var light = {
+    position: new T3D.Vec3(0, 10, 20),
+    ambient: [.2, .2, .2],
+    diffuse: [.8, .8, .8],
+    specular: [.8, .8, .8]
+};
+var shader = new T3D.Shader(gl, `
+    precision mediump float;
+    attribute vec3 aPos, aNorm;
+    uniform mat4 uWorld, uProj;
+    uniform mat3 uInverse;
+    varying vec4 vPos;
+    varying vec3 vNorm;
+    void main(void) {
+        vPos = uWorld * vec4(aPos, 1.0);
+        vNorm = uInverse * aNorm;
+        gl_Position = uProj * vPos;
+    }
+`, `
+    precision mediump float;
+    uniform mat4 uWorld;
+    uniform vec4 uColor;
+    uniform vec3 uLight;
+    uniform vec3 uAmbient;
+    uniform vec3 uDiffuse;
+    uniform vec3 uSpecular;
+    varying vec4 vPos;
+    varying vec3 vNorm;
+    void main(void) {
+        vec3 lightDir = normalize(uLight - vPos.xyz);
+        vec3 normal = normalize(vNorm);
+        vec3 eyeDir = normalize(-vPos.xyz);
+        vec3 reflectionDir = reflect(-lightDir, normal);
+        float specularWeight = 0.0;
+        if (uColor.w > 0.0) {
+            specularWeight = pow(max(dot(reflectionDir, eyeDir), 0.0), uColor.w);
+        }
+        float diffuseWeight = max(dot(normal, lightDir), 0.0);
+        vec3 weight = uAmbient + uSpecular * specularWeight  + uDiffuse * diffuseWeight;
+        gl_FragColor = vec4(uColor.xyz * weight, 1);
+    }
+`);
+
+function bind() {
+    var x;
+    var y;
+    var drag = false;
+
+    on(canvas, "mousedown", function (e) {
+        x = e.clientX;
+        y = e.clientY;
+        drag = true;
+    });
+
+    on(canvas, "mousemove", function (e) {
+        if (drag) {
+            e.preventDefault();
+            scene.transform.rotate.x -= (y - e.clientY);
+            scene.transform.rotate.y -= (x - e.clientX);
+            x = e.clientX;
+            y = e.clientY;
+        }
+    });
+
+    on(canvas, "mouseup", function (e) {
+        drag = false;
+    }); 
+    
+    on(canvas, "mouseout", function (e) {
+        drag = false;
+    });
+
+    on(canvas, "wheel", function (e) {
+        e.preventDefault();
+        camera.position.z += e.deltaY > 0 ? .2 : -.2;
+    });
+
+    code.commands.addCommand({
+        name: 'Run',
+        bindKey: {win: 'Ctrl-B',  mac: 'Command-B'},
+        exec: function(code) {
+            eval(code.getValue());
+        },
+        readOnly: true
+    });
+
+}
+
+function render(item) {
+    item.childs.forEach(child => {
+        render(child);
+    });
+    if (!item.mesh) {
+        return;
+    }
+    gl.useProgram(shader.program);
+    shader.attrib("aPos", item.mesh.verts, 3)
+        .attrib("aNorm", item.mesh.normals, 3)
+        .uniform("uWorld", camera.transform(item.transform).data)
+        .uniform("uProj", camera.perspective().data)
+        .uniform("uInverse", item.transform.matrix().invert().transpose().data)
+        .uniform("uColor", item.color)
+        .uniform("uLight", light.position.clone().sub(camera.position).toArray())
+        .uniform("uAmbient", light.ambient)
+        .uniform("uDiffuse", light.diffuse)
+        .uniform("uSpecular", light.specular);
+    gl.drawArrays(gl.TRIANGLES, 0, item.mesh.verts.length / 3);
+}
+
+function anim() {
+    requestAnimationFrame(anim);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    render(scene);
+}
+
+function resize() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    camera.aspect = canvas.width / canvas.height;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+}
+
+function init() {
+    camera.position.z = 3;
+    gl.clearColor(0.9, 0.9, 0.9, 1);
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.DEPTH_TEST);
+    code.setTheme("ace/theme/monokai");
+    code.getSession().setMode("ace/mode/javascript");
+    eval(code.getValue());
+    resize();
+    bind();
+    anim();
+    window.onresize = resize;
+}
+
+window.onload = init;
+
+</script>
+
+</body>
+</html>
