@@ -65,6 +65,7 @@ var shader = new T3D.Shader(gl, `
     uniform vec3 uAmbient;
     uniform vec3 uDiffuse;
     uniform vec3 uSpecular;
+    uniform float uLevels;
     varying vec4 vPos;
     varying vec3 vNorm;
     void main(void) {
@@ -78,7 +79,11 @@ var shader = new T3D.Shader(gl, `
         }
         float diffuseWeight = max(dot(normal, lightDir), 0.0);
         vec3 weight = uAmbient + uSpecular * specularWeight  + uDiffuse * diffuseWeight;
-        gl_FragColor = vec4(uColor.xyz * weight, 1);
+        vec3 color = uColor.xyz * weight;
+        if (uLevels > 1.0) {
+            color = floor(color * uLevels) * (1.0 / uLevels);
+        }
+        gl_FragColor = vec4(color, 1);
     }
 `);
 
@@ -144,7 +149,8 @@ function render(item) {
         .uniform("uLight", light.position.clone().sub(camera.position).toArray())
         .uniform("uAmbient", light.ambient)
         .uniform("uDiffuse", light.diffuse)
-        .uniform("uSpecular", light.specular);
+        .uniform("uSpecular", light.specular)
+        .uniform("uLevels", 5);
     gl.drawArrays(gl.TRIANGLES, 0, item.mesh.verts.length / 3);
 }
 
